@@ -1,5 +1,5 @@
 # lms
- Предварительно скачав IDE и Golang на ваш компьютер, нужно скачать 5 файлов из этого репозитория (server.go, agent.go, struct.go, otvet.txt, save.txt, active_vorker.txt).
+ Предварительно скачав IDE и Golang на ваш компьютер, нужно скачать в одну директорию 5 файлов из этого репозитория (server.go, agent.go, struct.go, otvet.txt, save.txt, active_vorker.txt).
  
  После открываем файлы otvet.txt и active_vorker.txt (В otvet.txt вы будете видеть id выражения, само выражение и его статус. А в active_vorker.txt вы будете видеть количество активных воркеров на данный момент).
  
