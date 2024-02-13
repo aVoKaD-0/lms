@@ -1,5 +1,1 @@
-9 90*2= Not enough time
-10 90--2= incorrect input
-11 90-2=88 ok
-12 90_8 incorrect input
-13 90+2=? Not enough time
+
