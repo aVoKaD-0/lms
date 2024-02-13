@@ -1,0 +1,391 @@
+package main
+
+import (
+	"errors"
+	"fmt"
+	"os"
+	"regexp"
+	"strconv"
+	"sync"
+	"time"
+	"unicode/utf8"
+)
+
+var IsLetter = regexp.MustCompile(`^[0-9+-/*()]+$`).MatchString
+
+func orchestrator(equation string) (int, int, error) {
+	x := 0
+	y := 0
+	U := 0
+	D := 0
+	P := 0
+	M := 0
+	err := IsLetter(equation)
+	if !err {
+		return 0, 0, errors.New("incorrect input")
+	}
+	for i := 0; i < utf8.RuneCountInString(equation); i++ {
+		if string(equation[i]) == "(" {
+			x++
+		}
+		if string(equation[i]) == ")" {
+			y++
+		}
+		if string(equation[i]) == "*" {
+			U++
+		}
+		if string(equation[i]) == "/" {
+			D++
+		}
+		if string(equation[i]) == "+" {
+			P++
+		}
+		if string(equation[i]) == "-" {
+			M++
+		}
+		if i < utf8.RuneCountInString(equation)-1 {
+			if string(equation[i]) == "*" && (string(equation[i+1]) == "+" || string(equation[i+1]) == "-" || string(equation[i+1]) == "*" || string(equation[i+1]) == "/") {
+				return 0, 0, errors.New("incorrect input")
+			}
+			if string(equation[i]) == "/" && (string(equation[i+1]) == "+" || string(equation[i+1]) == "-" || string(equation[i+1]) == "*" || string(equation[i+1]) == "/") {
+				return 0, 0, errors.New("incorrect input")
+			}
+			if string(equation[i]) == "+" && (string(equation[i+1]) == "+" || string(equation[i+1]) == "-" || string(equation[i+1]) == "*" || string(equation[i+1]) == "/") {
+				return 0, 0, errors.New("incorrect input")
+			}
+			if string(equation[i]) == "-" && (string(equation[i+1]) == "+" || string(equation[i+1]) == "-" || string(equation[i+1]) == "*" || string(equation[i+1]) == "/") {
+				return 0, 0, errors.New("incorrect input")
+			}
+			if string(equation[i]) == "(" && (string(equation[i+1]) == ")" || string(equation[i+1]) == "+" || string(equation[i+1]) == "*" || string(equation[i+1]) == "/") {
+				return 0, 0, errors.New("incorrect input")
+			}
+		} else if string(equation[0]) == "*" || string(equation[0]) == "/" {
+			return 0, 0, errors.New("incorrect input")
+		}
+	}
+	if x != y || (U == 0 && D == 0 && P == 0 && M == 0) {
+		return 0, 0, errors.New("incorrect input")
+	}
+	return x, y, nil
+}
+
+func addendum_otvet(equation string, ID int) {
+	f2, _ := os.Open("otvet.txt")
+	buffer2 := make([]byte, 2048)
+	_, _ = f2.Read(buffer2)
+	sch := 0
+	i := 0
+	for t, b := range buffer2 {
+		if b == 10 {
+			sch++
+			if sch == 1 {
+				i = t
+			}
+		}
+		if b == 0 {
+			buffer2 = buffer2[:t]
+			break
+		}
+	}
+	if sch == 4 {
+		buffer2 = buffer2[i+1:]
+		file2, _ := os.Create("otvet.txt")
+		_, _ = file2.WriteString(string(buffer2))
+	}
+	f, _ := os.Open("otvet.txt")
+	buffer := make([]byte, 2048)
+	_, _ = f.Read(buffer)
+	file, err := os.OpenFile("otvet.txt", os.O_APPEND, 0600)
+	if err != nil {
+		fmt.Println("ID:", ID, "\n", err)
+	}
+	if buffer[0] == 0 {
+		_, err = file.WriteString(strconv.Itoa(ID) + " " + equation + " adopted")
+		if err != nil {
+			fmt.Println("ID:", ID, "\n", err)
+		}
+	} else {
+		_, err = file.WriteString("\n" + strconv.Itoa(ID) + " " + equation + " adopted")
+		if err != nil {
+			fmt.Println("ID:", ID, "\n", err)
+		}
+	}
+}
+
+func addendum_save(equation string, ID, time_OperationU, time_OperationD, time_OperationP, time_OperationM int) {
+	file, _ := os.Open("save.txt")
+	buffer := make([]byte, 2048)
+	_, _ = file.Read(buffer)
+	f, err := os.OpenFile("save.txt", os.O_APPEND, 0600)
+	if err != nil {
+		fmt.Println("ID:", ID, "\n", err)
+	}
+	if buffer[0] == 0 {
+		_, err = f.WriteString(strconv.Itoa(ID) + " " + strconv.Itoa(time_OperationU) + " " + strconv.Itoa(time_OperationD) + " " + strconv.Itoa(time_OperationP) + " " + strconv.Itoa(time_OperationM) + " " + equation)
+		if err != nil {
+			fmt.Println("ID:", ID, "\n", err)
+		}
+	} else {
+		_, err = f.WriteString("\n" + strconv.Itoa(ID) + " " + strconv.Itoa(time_OperationU) + " " + strconv.Itoa(time_OperationD) + " " + strconv.Itoa(time_OperationP) + " " + strconv.Itoa(time_OperationM) + " " + equation)
+		if err != nil {
+			fmt.Println("ID:", ID, "\n", err)
+		}
+	}
+}
+
+func change_otvet(ID int, equation, otvet string, err2 error) {
+	file, _ := os.Open("otvet.txt")
+	buffer := make([]byte, 2048)
+	_, _ = file.Read(buffer)
+	for i, b := range buffer {
+		if b == 0 {
+			buffer = buffer[:i]
+			break
+		}
+	}
+	nachalo := 0
+	st := ""
+	flag := true
+	gl := 0
+	for i, byt := range buffer {
+		if byt == 10 || i == len(buffer)-1 {
+			st = string(buffer[nachalo:i])
+			probel := 0
+			for t, s := range st {
+				if string(s) == " " && probel == 0 {
+					if string(st[:t]) != strconv.Itoa(ID) {
+						break
+					} else {
+						probel = t
+					}
+				} else if string(s) == " " && probel != 0 {
+					if equation == st[probel+1:t] {
+						if err2 == nil {
+							st = st[:probel+1] + (equation + "=" + otvet) + " ok"
+						} else {
+							st = st[:probel+1] + equation + " " + fmt.Sprint(err2)
+						}
+						flag = false
+					}
+					break
+				}
+			}
+			if flag == true {
+				nachalo = i + 1
+			}
+		}
+		if flag == false {
+			if i == len(buffer)-1 {
+				gl = i + 1
+			} else {
+				gl = i
+			}
+			break
+		}
+	}
+	byts := make([]byte, 0)
+	for i, b := range buffer[:nachalo] {
+		if i == nachalo {
+			break
+		}
+		byts = append(byts, b)
+	}
+	for _, i := range st {
+		byts = append(byts, byte(i))
+	}
+	for _, i := range buffer[gl:] {
+		byts = append(byts, i)
+	}
+	f, _ := os.Create("otvet.txt")
+	_, _ = f.Write(byts)
+}
+
+func change_save(equation string, ID int) {
+	file, _ := os.Open("save.txt")
+	buffer := make([]byte, 2048)
+	_, _ = file.Read(buffer)
+	for i, b := range buffer {
+		if b == 0 {
+			buffer = buffer[:i]
+			break
+		}
+	}
+	nachalo := 0
+	st := ""
+	flag := true
+	byts := make([]byte, 0)
+	for i, byt := range buffer {
+		if byt == 10 || i == len(buffer)-1 {
+			st = string(buffer[nachalo:i])
+			for t, s := range st {
+				if string(s) == " " {
+					if string(st[:t]) != strconv.Itoa(ID) {
+						break
+					} else {
+						for t2 := utf8.RuneCountInString(st) - 1; t2 >= 0; t2-- {
+							if string(st[t2]) == " " {
+								if string(st[t2+1:]) == equation {
+									for b := 0; b < nachalo; b++ {
+										byts = append(byts, buffer[b])
+									}
+									for b := i + 1; b < len(buffer); b++ {
+										byts = append(byts, buffer[b])
+									}
+									flag = false
+									break
+								}
+							}
+						}
+					}
+				}
+			}
+			if flag == true {
+				nachalo = i + 1
+			}
+		}
+		if flag == false {
+			break
+		}
+	}
+	f, _ := os.Create("save.txt")
+	_, _ = f.Write(byts)
+}
+
+func proverka() int {
+	f, _ := os.Open("save.txt")
+	buffer := make([]byte, 2048)
+	_, _ = f.Read(buffer)
+	mx := sync.Mutex{}
+	var equation string
+	var time_OperationU int
+	var time_OperationD int
+	var time_OperationP int
+	var time_OperationM int
+	var ID int
+	if buffer[0] != 0 {
+		nachalo := 0
+		for i, b := range buffer {
+			if b == 0 {
+				buffer = buffer[:i]
+				break
+			}
+		}
+		for i, b := range buffer {
+			st := ""
+			if b == 10 || i == len(buffer)-1 {
+				if i != len(buffer)-1 {
+					st = string(buffer[nachalo:i])
+				} else {
+					st = string(buffer[nachalo : i+1])
+				}
+				nach := 0
+				sch := 0
+				for t, s := range st {
+					if string(s) == " " && sch == 0 {
+						ID, _ = strconv.Atoi(st[:t])
+						nach = t + 1
+						sch++
+					} else if string(s) == " " && sch == 1 {
+						time_OperationU, _ = strconv.Atoi(st[nach:t])
+						nach = t + 1
+						sch++
+					} else if string(s) == " " && sch == 2 {
+						time_OperationD, _ = strconv.Atoi(st[nach:t])
+						nach = t + 1
+						sch++
+					} else if string(s) == " " && sch == 3 {
+						time_OperationP, _ = strconv.Atoi(st[nach:t])
+						nach = t + 1
+						sch++
+					} else if string(s) == " " && sch == 4 {
+						time_OperationM, _ = strconv.Atoi(st[nach:t])
+						equation = string(st[t+1:])
+						nach = t + 1
+						sch++
+						break
+					}
+				}
+				go func(equation string, ID, time_OperationU, time_OperationD, time_OperationP, time_OperationM int) {
+					fmt.Println("ID:", ID, "adopted")
+					otvet, err := Orchestrator2(ID, time_OperationU, time_OperationD, time_OperationP, time_OperationM, equation)
+					mx.Lock()
+					change_save(equation, ID)
+					change_otvet(ID, equation, otvet, err)
+					mx.Unlock()
+				}(equation, ID, time_OperationU, time_OperationD, time_OperationP, time_OperationM)
+				nachalo = i + 1
+				time.Sleep(1 * time.Second)
+			}
+		}
+	}
+	return ID
+}
+
+func proverka_dlin() bool {
+	f, _ := os.Open("save.txt")
+	buffer := make([]byte, 2048)
+	_, _ = f.Read(buffer)
+	sch := 0
+	for _, b := range buffer {
+		if b == 10 {
+			sch++
+		}
+		if b == 0 {
+			break
+		}
+	}
+	if sch == 4 {
+		return false
+	}
+	return true
+}
+
+func max_ID() int {
+	f, _ := os.Open("otvet.txt")
+	buffer := make([]byte, 2048)
+	_, _ = f.Read(buffer)
+	if buffer[0] == 0 {
+		return 1
+	}
+	max_id, _ := strconv.Atoi(string(buffer[0]))
+	flag := false
+	t := 0
+	for i, b := range buffer {
+		if b == 10 {
+			t = i
+			flag = true
+		}
+		if flag == true {
+			if string(b) == " " {
+				max, _ := strconv.Atoi(string(buffer[t+1 : i]))
+				if max_id < max {
+					max_id = max
+				}
+				flag = false
+			}
+		}
+	}
+	return max_id
+}
+
+func number_operations(equation string) (int, int, int, int) {
+	operatoinU := 0
+	operatoinD := 0
+	operatoinP := 0
+	operatoinM := 0
+	for _, s := range equation {
+		if string(s) == "+" {
+			operatoinP++
+		}
+		if string(s) == "-" {
+			operatoinM++
+		}
+		if string(s) == "*" {
+			operatoinU++
+		}
+		if string(s) == "/" {
+			operatoinD++
+		}
+	}
+	return operatoinU, operatoinD, operatoinP, operatoinM
+}
