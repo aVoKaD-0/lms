@@ -13,7 +13,7 @@ import (
 
 var IsLetter = regexp.MustCompile(`^[0-9+-/*()]+$`).MatchString
 
-func orchestrator(equation string) (int, int, error) {
+func validation(equation string) (int, int, error) { // проверяем на валидность выражение
 	x := 0
 	y := 0
 	U := 0
@@ -69,13 +69,13 @@ func orchestrator(equation string) (int, int, error) {
 	return x, y, nil
 }
 
-func addendum_otvet(equation string, ID int) {
+func addendum_otvet(equation string, ID int) { // добавляем выражение в ответ
 	f2, _ := os.Open("otvet.txt")
 	buffer2 := make([]byte, 2048)
 	_, _ = f2.Read(buffer2)
 	sch := 0
 	i := 0
-	for t, b := range buffer2 {
+	for t, b := range buffer2 { // смотрим количество выражений в ответе
 		if b == 10 {
 			sch++
 			if sch == 1 {
@@ -87,7 +87,7 @@ func addendum_otvet(equation string, ID int) {
 			break
 		}
 	}
-	if sch == 4 {
+	if sch == 4 { // если в ответе больше 5 выражение, убираем первое
 		buffer2 = buffer2[i+1:]
 		file2, _ := os.Create("otvet.txt")
 		_, _ = file2.WriteString(string(buffer2))
@@ -97,9 +97,9 @@ func addendum_otvet(equation string, ID int) {
 	_, _ = f.Read(buffer)
 	file, err := os.OpenFile("otvet.txt", os.O_APPEND, 0600)
 	if err != nil {
-		fmt.Println("ID:", ID, "\n", err)
+		fmt.Println("ID:", ID, err)
 	}
-	if buffer[0] == 0 {
+	if buffer[0] == 0 { // добавляем новое выражение
 		_, err = file.WriteString(strconv.Itoa(ID) + " " + equation + " adopted")
 		if err != nil {
 			fmt.Println("ID:", ID, "\n", err)
@@ -107,18 +107,18 @@ func addendum_otvet(equation string, ID int) {
 	} else {
 		_, err = file.WriteString("\n" + strconv.Itoa(ID) + " " + equation + " adopted")
 		if err != nil {
-			fmt.Println("ID:", ID, "\n", err)
+			fmt.Println("ID:", ID, err)
 		}
 	}
 }
 
-func addendum_save(equation string, ID, time_OperationU, time_OperationD, time_OperationP, time_OperationM int) {
+func addendum_save(equation string, ID, time_OperationU, time_OperationD, time_OperationP, time_OperationM int) { // добавляем выражение в базу агентов
 	file, _ := os.Open("save.txt")
 	buffer := make([]byte, 2048)
 	_, _ = file.Read(buffer)
 	f, err := os.OpenFile("save.txt", os.O_APPEND, 0600)
 	if err != nil {
-		fmt.Println("ID:", ID, "\n", err)
+		fmt.Println("ID:", ID, err)
 	}
 	if buffer[0] == 0 {
 		_, err = f.WriteString(strconv.Itoa(ID) + " " + strconv.Itoa(time_OperationU) + " " + strconv.Itoa(time_OperationD) + " " + strconv.Itoa(time_OperationP) + " " + strconv.Itoa(time_OperationM) + " " + equation)
@@ -128,12 +128,12 @@ func addendum_save(equation string, ID, time_OperationU, time_OperationD, time_O
 	} else {
 		_, err = f.WriteString("\n" + strconv.Itoa(ID) + " " + strconv.Itoa(time_OperationU) + " " + strconv.Itoa(time_OperationD) + " " + strconv.Itoa(time_OperationP) + " " + strconv.Itoa(time_OperationM) + " " + equation)
 		if err != nil {
-			fmt.Println("ID:", ID, "\n", err)
+			fmt.Println("ID:", ID, err)
 		}
 	}
 }
 
-func change_otvet(ID int, equation, otvet string, err2 error) {
+func change_otvet(ID int, equation, otvet string, err2 error) { // меняем статус выражения в ответе
 	file, _ := os.Open("otvet.txt")
 	buffer := make([]byte, 2048)
 	_, _ = file.Read(buffer)
@@ -147,18 +147,18 @@ func change_otvet(ID int, equation, otvet string, err2 error) {
 	st := ""
 	flag := true
 	gl := 0
-	for i, byt := range buffer {
+	for i, byt := range buffer { // пробегаем по ответам
 		if byt == 10 || i == len(buffer)-1 {
 			st = string(buffer[nachalo:i])
 			probel := 0
 			for t, s := range st {
-				if string(s) == " " && probel == 0 {
+				if string(s) == " " && probel == 0 { // смотрим id выражения, если не совпадает идем на следующее выражение
 					if string(st[:t]) != strconv.Itoa(ID) {
 						break
 					} else {
 						probel = t
 					}
-				} else if string(s) == " " && probel != 0 {
+				} else if string(s) == " " && probel != 0 { // иначе меняем статус выражения
 					if equation == st[probel+1:t] {
 						if err2 == nil {
 							st = st[:probel+1] + (equation + "=" + otvet) + " ok"
@@ -197,10 +197,10 @@ func change_otvet(ID int, equation, otvet string, err2 error) {
 		byts = append(byts, i)
 	}
 	f, _ := os.Create("otvet.txt")
-	_, _ = f.Write(byts)
+	_, _ = f.Write(byts) // перезаписываем ответы
 }
 
-func change_save(equation string, ID int) {
+func change_save(equation string, ID int) { // удаляем выражение с базы агентов
 	file, _ := os.Open("save.txt")
 	buffer := make([]byte, 2048)
 	_, _ = file.Read(buffer)
@@ -214,15 +214,18 @@ func change_save(equation string, ID int) {
 	st := ""
 	flag := true
 	byts := make([]byte, 0)
-	for i, byt := range buffer {
+	for i, byt := range buffer { // пробегаемя по базе агентов
 		if byt == 10 || i == len(buffer)-1 {
+			if i == len(buffer)-1 {
+				i++
+			}
 			st = string(buffer[nachalo:i])
 			for t, s := range st {
 				if string(s) == " " {
-					if string(st[:t]) != strconv.Itoa(ID) {
+					if string(st[:t]) != strconv.Itoa(ID) { // id не совпадает идем на следующее выражение
 						break
 					} else {
-						for t2 := utf8.RuneCountInString(st) - 1; t2 >= 0; t2-- {
+						for t2 := utf8.RuneCountInString(st) - 1; t2 >= 0; t2-- { // удаляем выражение
 							if string(st[t2]) == " " {
 								if string(st[t2+1:]) == equation {
 									for b := 0; b < nachalo; b++ {
@@ -248,10 +251,10 @@ func change_save(equation string, ID int) {
 		}
 	}
 	f, _ := os.Create("save.txt")
-	_, _ = f.Write(byts)
+	_, _ = f.Write(byts) // обновляем базу агентов
 }
 
-func proverka() int {
+func proverka() int { // проверяем есть ли у нас данные в базе агентов с запуском программы
 	f, _ := os.Open("save.txt")
 	buffer := make([]byte, 2048)
 	_, _ = f.Read(buffer)
@@ -262,7 +265,7 @@ func proverka() int {
 	var time_OperationP int
 	var time_OperationM int
 	var ID int
-	if buffer[0] != 0 {
+	if buffer[0] != 0 { // если выражений есть отправляем их агентам
 		nachalo := 0
 		for i, b := range buffer {
 			if b == 0 {
@@ -307,7 +310,7 @@ func proverka() int {
 				}
 				go func(equation string, ID, time_OperationU, time_OperationD, time_OperationP, time_OperationM int) {
 					fmt.Println("ID:", ID, "adopted")
-					otvet, err := Orchestrator2(ID, time_OperationU, time_OperationD, time_OperationP, time_OperationM, equation)
+					otvet, err := Orchestrator(ID, time_OperationU, time_OperationD, time_OperationP, time_OperationM, equation)
 					mx.Lock()
 					change_save(equation, ID)
 					change_otvet(ID, equation, otvet, err)
@@ -321,7 +324,7 @@ func proverka() int {
 	return ID
 }
 
-func proverka_dlin() bool {
+func check_dlin_save() bool { // проверяем количество выражений в базе агентов
 	f, _ := os.Open("save.txt")
 	buffer := make([]byte, 2048)
 	_, _ = f.Read(buffer)
@@ -340,7 +343,7 @@ func proverka_dlin() bool {
 	return true
 }
 
-func max_ID() int {
+func max_ID() int { // смотрим какой id самый большой в ответах
 	f, _ := os.Open("otvet.txt")
 	buffer := make([]byte, 2048)
 	_, _ = f.Read(buffer)
@@ -368,7 +371,7 @@ func max_ID() int {
 	return max_id
 }
 
-func number_operations(equation string) (int, int, int, int) {
+func number_operations(equation string) (int, int, int, int) { // смотрим какие операции имеются в выражении
 	operatoinU := 0
 	operatoinD := 0
 	operatoinP := 0
@@ -388,4 +391,30 @@ func number_operations(equation string) (int, int, int, int) {
 		}
 	}
 	return operatoinU, operatoinD, operatoinP, operatoinM
+}
+
+func check_to_repeat(expression string) bool { // проверка на повторное выражение
+	f, _ := os.Open("save.txt")
+	buffer := make([]byte, 2048)
+	_, _ = f.Read(buffer)
+	sch := 0
+	t := 0
+	if buffer[0] != 0 {
+		for i, b := range buffer {
+			if string(b) == " " {
+				sch++
+				if sch == 5 {
+					t = i
+				}
+			}
+			if sch == 5 && b == 10 || b == 0 {
+				st := string(buffer[t+1 : i])
+				if st == expression {
+					return false
+				}
+				sch = 0
+			}
+		}
+	}
+	return true
 }
