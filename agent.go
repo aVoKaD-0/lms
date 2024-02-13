@@ -13,7 +13,7 @@ import (
 var active = 0
 var mx2 = sync.Mutex{}
 
-func vorker(ch, equation string, t int, i int, k2 int) (string, int, int, error) {
+func vorker(ch, equation string, t int, i int, k2 int) (string, int, int, error) { // делаем одну операцию
 	mx2.Lock()
 	active++
 	f, _ := os.Create("active_vorker.txt")
@@ -45,6 +45,9 @@ func vorker(ch, equation string, t int, i int, k2 int) (string, int, int, error)
 		equation = strconv.Itoa(number2 * number3)
 		t = t - ((t - k2) - utf8.RuneCountInString(strconv.Itoa(number2*number3))) - 1
 	} else if ch == "/" {
+		if number3 == 0 {
+			return equation, t, i, errors.New("divide by zero")
+		}
 		equation = strconv.Itoa(number2 / number3)
 		t = t - ((t - k2) - utf8.RuneCountInString(strconv.Itoa(number2/number3))) - 1
 	}
@@ -52,22 +55,22 @@ func vorker(ch, equation string, t int, i int, k2 int) (string, int, int, error)
 	return equation, t, i, nil
 }
 
-func Orchestrator2(ID, time_OperationU, time_OperationD, time_OperationP, time_OperationM int, equation string) (string, error) {
-	x, y, err := orchestrator(equation)
+func Orchestrator(ID, time_OperationU, time_OperationD, time_OperationP, time_OperationM int, equation string) (string, error) { // проверяет на наличие скобок
+	x, y, err := validation(equation)
 	if err != nil {
 		return "", err
 	}
 	if x != 0 && y != 0 {
-		staples_chan := make([]string, 0)
-		staples_coordinates := make([]int, 0)
-		staples_coordinates2 := make([]int, 0)
+		staples_chan := make([]string, 0)      // храним выражение в скопках
+		staples_coordinates := make([]int, 0)  // храним координаты скобок (динамический)
+		staples_coordinates2 := make([]int, 0) // храним координаты скобок (постоянный)
 		staples := 0
 		for i := 0; i < utf8.RuneCountInString(equation); i++ {
 			if string(equation[i]) == "(" {
 				staples++
 				staples_coordinates = append(staples_coordinates, i)
 				staples_coordinates2 = append(staples_coordinates2, i)
-				for t := i + 1; t < utf8.RuneCountInString(equation); t++ {
+				for t := i + 1; t < utf8.RuneCountInString(equation); t++ { // возможно в скобке есть ещё скобки, делаем проверку
 					if staples != 0 && string(equation[t]) == ")" {
 						staples_chan = append(staples_chan, string(equation[staples_coordinates[len(staples_coordinates)-1]+1:t]))
 						str, err := agent(equation[staples_coordinates[len(staples_coordinates)-1]+1:t], time_OperationU, time_OperationD, time_OperationP, time_OperationM)
@@ -97,7 +100,7 @@ func Orchestrator2(ID, time_OperationU, time_OperationD, time_OperationP, time_O
 	return otvet, nil
 }
 
-func agent(equation string, time_OperationU, time_OperationD, time_OperationP, time_OperationM int) (string, error) {
+func agent(equation string, time_OperationU, time_OperationD, time_OperationP, time_OperationM int) (string, error) { // так называемый агент, но не воркер!
 	k := 0
 	k2 := 0
 	equation2 := ""
@@ -106,7 +109,7 @@ func agent(equation string, time_OperationU, time_OperationD, time_OperationP, t
 	i_chan := make(chan int)
 	err_chan := make(chan error)
 	for i := 0; i < utf8.RuneCountInString(equation); i++ {
-		if string(equation[i]) == "+" || string(equation[i]) == "-" || string(equation[i]) == "/" || string(equation[i]) == "*" {
+		if string(equation[i]) == "+" || string(equation[i]) == "-" || string(equation[i]) == "/" || string(equation[i]) == "*" { // сохраняем начальную координату операции
 			k2 = k
 			k = i + 1
 		}
@@ -118,7 +121,7 @@ func agent(equation string, time_OperationU, time_OperationD, time_OperationP, t
 						t++
 					}
 					t2 := t
-					go func(equation string, t, i, k2 int) {
+					go func(equation string, t, i, k2 int) { // воркер
 						equation2, t, i, err = vorker("*", equation[k2:t], t, i, k2)
 						err_chan <- err
 						expression <- equation2
@@ -130,7 +133,7 @@ func agent(equation string, time_OperationU, time_OperationD, time_OperationP, t
 					active--
 					f, _ := os.Create("active_vorker.txt")
 					_, _ = f.WriteString(strconv.Itoa(active))
-					mx2.Unlock()
+					mx2.Unlock() // убираем воркер с актива
 					err = <-err_chan
 					if err != nil {
 						return "", err
@@ -153,7 +156,7 @@ func agent(equation string, time_OperationU, time_OperationD, time_OperationP, t
 						t++
 					}
 					t2 := t
-					go func(equation string, t, i, k2 int) {
+					go func(equation string, t, i, k2 int) { // воркер
 						equation2, t, i, err = vorker("/", equation[k2:t], t, i, k2)
 						err_chan <- err
 						expression <- equation2
@@ -166,7 +169,7 @@ func agent(equation string, time_OperationU, time_OperationD, time_OperationP, t
 					active--
 					f, _ := os.Create("active_vorker.txt")
 					_, _ = f.WriteString(strconv.Itoa(active))
-					mx2.Unlock()
+					mx2.Unlock() // убираем воркер с актива
 					if err != nil {
 						return "", err
 					}
@@ -184,7 +187,7 @@ func agent(equation string, time_OperationU, time_OperationD, time_OperationP, t
 	k = 0
 	k2 = 0
 	for i := 0; i < utf8.RuneCountInString(equation); i++ {
-		if (string(equation[i]) == "*" || string(equation[i]) == "-" || string(equation[i]) == "/" || string(equation[i]) == "+") && i != 0 {
+		if (string(equation[i]) == "*" || string(equation[i]) == "-" || string(equation[i]) == "/" || string(equation[i]) == "+") && i != 0 { // сохраняем начальную координату операции
 			k2 = k
 			k = i + 1
 		}
@@ -196,7 +199,7 @@ func agent(equation string, time_OperationU, time_OperationD, time_OperationP, t
 						t++
 					}
 					t2 := t
-					go func(equation string, t, i, k2 int) {
+					go func(equation string, t, i, k2 int) { // воркер
 						equation2, t, i, err = vorker("+", equation[k2:t], t, i, k2)
 						err_chan <- err
 						expression <- equation2
@@ -209,7 +212,7 @@ func agent(equation string, time_OperationU, time_OperationD, time_OperationP, t
 					active--
 					f, _ := os.Create("active_vorker.txt")
 					_, _ = f.WriteString(strconv.Itoa(active))
-					mx2.Unlock()
+					mx2.Unlock() // убираем воркер с актива
 					if err != nil {
 						return "", err
 					}
@@ -230,7 +233,7 @@ func agent(equation string, time_OperationU, time_OperationD, time_OperationP, t
 						t++
 					}
 					t2 := t
-					go func(equation string, t, i, k2 int) {
+					go func(equation string, t, i, k2 int) { // воркер
 						equation2, t, i, err = vorker("-", equation[k2:t], t, i, k2)
 						err_chan <- err
 						expression <- equation2
@@ -243,7 +246,7 @@ func agent(equation string, time_OperationU, time_OperationD, time_OperationP, t
 					active--
 					f, _ := os.Create("active_vorker.txt")
 					_, _ = f.WriteString(strconv.Itoa(active))
-					mx2.Unlock()
+					mx2.Unlock() // убираем воркер с актива
 					if err != nil {
 						return "", err
 					}
