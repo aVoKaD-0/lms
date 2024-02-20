@@ -35,3 +35,5 @@
 
 ![документация](https://github.com/aVoKaD-0/lms/assets/139006972/3100791c-c220-48fe-925a-a4c712886bc7)
 
+тг @aVoKaD_0
+
