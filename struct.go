@@ -74,13 +74,9 @@ func addendum_otvet(equation string, ID int) { // добавляем выраж�
 	buffer2 := make([]byte, 2048)
 	_, _ = f2.Read(buffer2)
 	sch := 0
-	i := 0
 	for t, b := range buffer2 { // смотрим количество выражений в ответе
 		if b == 10 {
 			sch++
-			if sch == 1 {
-				i = t
-			}
 		}
 		if b == 0 {
 			buffer2 = buffer2[:t]
@@ -88,7 +84,35 @@ func addendum_otvet(equation string, ID int) { // добавляем выраж�
 		}
 	}
 	if sch == 4 { // если в ответе больше 5 выражение, убираем первое
-		buffer2 = buffer2[i+1:]
+		t := 0
+		p := 0
+		flag_delete := true
+		for i, n := range buffer2 {
+			if n == 32 {
+				p = i
+			}
+			if n == 10 {
+				if string(buffer2[p+1:i]) != "adopted" {
+					buffer := buffer2[i+1:]
+					buffer2 = buffer2[:t]
+					for _, by := range buffer {
+						buffer2 = append(buffer2, by)
+					}
+					flag_delete = false
+				}
+				t = i + 1
+			}
+			if i == len(buffer2)-1 {
+				if string(buffer2[p:i]) != "adopted" {
+					buffer2 = buffer2[t : i+1]
+					flag_delete = false
+				}
+				t = i + 1
+			}
+			if flag_delete == false {
+				break
+			}
+		}
 		file2, _ := os.Create("otvet.txt")
 		_, _ = file2.WriteString(string(buffer2))
 	}
@@ -248,6 +272,11 @@ func change_save(equation string, ID int) { // удаляем выражение
 		}
 		if flag == false {
 			break
+		}
+	}
+	if len(byts) > 0 {
+		if byts[len(byts)-1] == 10 {
+			byts = byts[:len(byts)-1]
 		}
 	}
 	f, _ := os.Create("save.txt")
